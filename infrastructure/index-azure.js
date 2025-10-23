@@ -75,21 +75,23 @@ const acrPullRole = new azure.authorization.RoleAssignment("aks-acr-pull", {
     scope: registry.id,
 });
 
-// Get AKS credentials - FIXED
-const creds = pulumi.all([resourceGroup.name, aksCluster.name]).apply(async ([rgName, clusterName]) => {
-    const result = await azure.containerservice.listManagedClusterUserCredentials({
+// Get AKS credentials
+const kubeconfig = pulumi.all([resourceGroup.name, aksCluster.name]).apply(async ([rgName, clusterName]) => {
+    const credentials = await azure.containerservice.listManagedClusterUserCredentials({
         resourceGroupName: rgName,
         resourceName: clusterName,
     });
-    return result;
-});
-
-const kubeconfig = creds.apply(result => {
-    if (!result || !result.kubeconfigs || result.kubeconfigs.length === 0) {
-        throw new Error("No kubeconfig found in credentials");
+    
+    if (!credentials.kubeconfigs || credentials.kubeconfigs.length === 0) {
+        throw new Error("No kubeconfig returned from AKS");
     }
-    const encoded = result.kubeconfigs[0].value;
-    return Buffer.from(encoded, "base64").toString();
+    
+    const kubeConfigContent = credentials.kubeconfigs[0].value;
+    if (!kubeConfigContent) {
+        throw new Error("Kubeconfig value is empty");
+    }
+    
+    return Buffer.from(kubeConfigContent, "base64").toString("utf8");
 });
 
 // Create a Kubernetes provider instance using the AKS cluster's kubeconfig
