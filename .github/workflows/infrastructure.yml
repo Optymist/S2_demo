@@ -14,6 +14,7 @@ env:
   LOCATION: eastus
   AZURE_STORAGE_ACCOUNT: pulumistatestorage001
   AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+  PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
 
 jobs:
   provision:
