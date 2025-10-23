@@ -71,6 +71,19 @@ curl http://localhost:3001/api/message
 
 ## Kubernetes/AKS Setup
 
+### Prerequisites
+
+Before deploying the Datadog agent, you need to install the Datadog Operator:
+
+```bash
+# Install the Datadog Operator using Helm
+helm repo add datadog https://helm.datadoghq.com
+helm repo update
+helm install datadog-operator datadog/datadog-operator
+```
+
+Or follow the official installation guide: https://docs.datadoghq.com/containers/datadog_operator/
+
 ### 1. Create Datadog Secret
 
 Update the secret in `k8s/datadog-agent.yaml` or create it via kubectl:
@@ -87,17 +100,25 @@ kubectl apply -f k8s/datadog-agent.yaml
 
 ### 2. Deploy Datadog Agent
 
+The Datadog agent now uses the DatadogAgent Custom Resource (CRD) v2alpha1, which is managed by the Datadog Operator:
+
 ```bash
-# Deploy the Datadog agent DaemonSet
+# Deploy the Datadog agent using the operator
 kubectl apply -f k8s/datadog-agent.yaml
 
 # Verify deployment
-kubectl get daemonset -n microservices-demo
-kubectl get pods -n microservices-demo -l app=datadog-agent
+kubectl get datadogagent -n microservices-demo
+kubectl get pods -n microservices-demo -l agent.datadoghq.com/name=datadog
 
 # Check logs
-kubectl logs -n microservices-demo -l app=datadog-agent
+kubectl logs -n microservices-demo -l agent.datadoghq.com/component=agent
 ```
+
+**Configuration Details:**
+- Uses Datadog site: `us5.datadoghq.com`
+- Log collection enabled with `containerCollectAll: true`
+- AKS-specific admission controller selectors enabled
+- Managed by the Datadog Operator for simplified deployment
 
 ### 3. Deploy Application Services
 
@@ -121,7 +142,7 @@ kubectl port-forward -n microservices-demo service/frontend 8080:80
 
 # Check Datadog agent status
 kubectl exec -n microservices-demo -it \
-  $(kubectl get pod -n microservices-demo -l app=datadog-agent -o jsonpath='{.items[0].metadata.name}') \
+  $(kubectl get pod -n microservices-demo -l agent.datadoghq.com/component=agent -o jsonpath='{.items[0].metadata.name}') \
   -- agent status
 ```
 
