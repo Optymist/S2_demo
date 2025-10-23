@@ -15,76 +15,29 @@ spec:
     metadata:
       labels:
         app: backend
-        version: v1
     spec:
+      imagePullSecrets:
+        - name: acr-pull
       containers:
-      - name: backend
-        image: backend-service:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 3001
-          name: http
-          protocol: TCP
-        env:
-        - name: PORT
-          value: "3001"
-        - name: NODE_ENV
-          value: "production"
-        - name: DD_AGENT_HOST
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
-        - name: DD_TRACE_AGENT_PORT
-          value: "8126"
-        - name: DD_SERVICE
-          value: "backend-service"
-        - name: DD_ENV
-          value: "production"
-        - name: DD_VERSION
-          value: "1.0.0"
-        - name: DD_LOGS_INJECTION
-          value: "true"
-        - name: DD_TRACE_SAMPLE_RATE
-          value: "1"
-        - name: DD_PROFILING_ENABLED
-          value: "false"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3001
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3001
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 2
+        - name: backend
+          image: backend-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+          env:
+            - name: PORT
+              value: "3001"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
   namespace: microservices-demo
-  labels:
-    app: backend
 spec:
   type: ClusterIP
   selector:
     app: backend
   ports:
-  - port: 3001
-    targetPort: 3001
-    protocol: TCP
-    name: http
+    - name: http
+      port: 3001
+      targetPort: 3001

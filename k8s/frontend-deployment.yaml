@@ -15,64 +15,21 @@ spec:
     metadata:
       labels:
         app: frontend
-        version: v1
     spec:
+      imagePullSecrets:
+        - name: acr-pull
       containers:
-      - name: frontend
-        image: frontend-service:latest
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 3000
-          name: http
-          protocol: TCP
-        env:
-        - name: PORT
-          value: "3000"
-        - name: BACKEND_URL
-          value: "http://backend:3001"
-        - name: NODE_ENV
-          value: "production"
-        - name: DD_AGENT_HOST
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
-        - name: DD_TRACE_AGENT_PORT
-          value: "8126"
-        - name: DD_SERVICE
-          value: "frontend-service"
-        - name: DD_ENV
-          value: "production"
-        - name: DD_VERSION
-          value: "1.0.0"
-        - name: DD_LOGS_INJECTION
-          value: "true"
-        - name: DD_TRACE_SAMPLE_RATE
-          value: "1"
-        - name: DD_PROFILING_ENABLED
-          value: "false"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 2
+        - name: frontend
+          image: frontend-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: BACKEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: BACKEND_URL
 ---
 apiVersion: v1
 kind: Service
@@ -86,7 +43,6 @@ spec:
   selector:
     app: frontend
   ports:
-  - port: 80
-    targetPort: 3000
-    protocol: TCP
-    name: http
+    - name: http
+      port: 80
+      targetPort: 3000
