@@ -11,6 +11,10 @@ const nodeCount = cfg.getNumber("nodeCount") || 1;
 const nodeSize = cfg.get("nodeSize") || process.env.NODE_SIZE || "Standard_DC2s_v3";
 const dnsPrefix = cfg.get("dnsPrefix") || `${aksName}-dns`;
 
+// NEW: ACR config for attaching pull permissions
+const acrName = cfg.get("acrName") || "demoday"; // set to your ACR name
+const acrResourceGroupName = cfg.get("acrResourceGroupName") || resourceGroupName;
+
 // 1) Resource Group
 const rg = new azure.resources.ResourceGroup("rg", {
   resourceGroupName,
@@ -23,8 +27,6 @@ const aks = new azure.containerservice.ManagedCluster("aks", {
   location,
   dnsPrefix,
   identity: { type: "SystemAssigned" },
-
-  // Use agentPoolProfiles to satisfy API contract
   agentPoolProfiles: [{
     name: "systempool",
     vmSize: nodeSize,
@@ -33,11 +35,20 @@ const aks = new azure.containerservice.ManagedCluster("aks", {
     mode: "System",
     osType: "Linux",
   }],
-
   enableRBAC: true,
 }, {
   customTimeouts: { create: "60m", update: "60m", delete: "60m" },
 });
+
+// NEW: Grant AcrPull to the AKS kubelet identity so it can pull from ACR
+const clientCfg = azure.authorization.getClientConfigOutput();
+const acrId = pulumi.interpolate`/subscriptions/${clientCfg.subscriptionId}/resourceGroups/${acrResourceGroupName}/providers/Microsoft.ContainerRegistry/registries/${acrName}`;
+const acrPullRole = new azure.authorization.RoleAssignment("aks-acr-pull", {
+  principalId: aks.identityProfile.apply(ip => ip?.kubeletidentity?.objectId || ""),
+  principalType: "ServicePrincipal",
+  roleDefinitionId: pulumi.interpolate`/subscriptions/${clientCfg.subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d`, // AcrPull
+  scope: acrId,
+}, { dependsOn: aks });
 
 // 3) Kubeconfig for the new AKS
 const kubeconfig = pulumi
@@ -56,22 +67,22 @@ const kubeconfig = pulumi
 // 4) Kubernetes provider targeting AKS
 const k8sProvider = new k8s.Provider("aks-provider", { kubeconfig }, { dependsOn: aks });
 
-// 5) Apply your existing YAML manifests using the provider
-const appManifests = new k8s.yaml.ConfigGroup(
-  "app-manifests",
+// 5) Apply only cluster-scoped app config (namespace + configmap). Leave app pods/Datadog to dedicated workflows.
+const appBase = new k8s.yaml.ConfigGroup(
+  "app-base",
   {
     files: [
       "../k8s/namespace.yaml",
       "../k8s/configmap.yaml",
-      "../k8s/backend-deployment.yaml",
-      "../k8s/frontend-deployment.yaml",
-      "../k8s/datadog-agent.yaml",
+      // Removed: ../k8s/backend-deployment.yaml
+      // Removed: ../k8s/frontend-deployment.yaml
+      // Removed: ../k8s/datadog-agent.yaml (requires Datadog Operator CRDs)
     ],
   },
-  { provider: k8sProvider } // <= this tells Pulumi to use AKS
+  { provider: k8sProvider, dependsOn: [acrPullRole] }
 );
 
-// 6) Optional: export outputs
+// 6) Outputs
 exports.resourceGroup = rg.name;
 exports.aksName = aks.name;
 exports.kubeconfig = kubeconfig;

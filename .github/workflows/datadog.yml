@@ -3,7 +3,6 @@ name: datadog-deployment
 on:
   workflow_dispatch:
 
-# ...existing code...
 jobs:
   deploy-datadog:
     name: Deploy Datadog
@@ -21,9 +20,9 @@ jobs:
 
       - name: Set AKS Context
         uses: azure/aks-set-context@v4
+        with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
-          resource-group: ${{ env.RESOURCE_GROUP }}
-          cluster-name: <AKS_NAME>
+          cluster-name: akse2cd7e70
 
       - name: Install Helm
         uses: azure/setup-helm@v4
