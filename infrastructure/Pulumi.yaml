@@ -17,4 +17,4 @@ config:
     default: "microservicesacr"
   kubernetes:kubeconfig:
     description: Path to kubeconfig file (optional, for generic k8s deployment)
-    default: "~/.kube/config"
+    value: "~/.kube/config"
