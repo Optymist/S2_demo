@@ -51,7 +51,7 @@ jobs:
 
       - name: Install Dependencies
         working-directory: infrastructure
-        run: npm ci
+        run: npm install
 
       - name: Select or Init Stack
         working-directory: infrastructure
