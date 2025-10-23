@@ -25,7 +25,7 @@ const registry = new azure.containerregistry.Registry("container-registry", {
     registryName: acrName,
     location: resourceGroup.location,
     sku: {
-        name: "Basic", // Free tier compatible
+        name: "Basic",
     },
     adminUserEnabled: true,
     tags: {
@@ -34,7 +34,7 @@ const registry = new azure.containerregistry.Registry("container-registry", {
     },
 });
 
-// Create an AKS cluster (optimized for free trial)
+// Create an AKS cluster
 const aksCluster = new azure.containerservice.ManagedCluster("aks-cluster", {
     resourceGroupName: resourceGroup.name,
     resourceName: aksClusterName,
@@ -42,8 +42,8 @@ const aksCluster = new azure.containerservice.ManagedCluster("aks-cluster", {
     dnsPrefix: "microservices",
     agentPoolProfiles: [{
         name: "agentpool",
-        count: 1, // Minimal nodes for free tier
-        vmSize: "Standard_B2s", // Affordable VM size
+        count: 1,
+        vmSize: "Standard_B2s",
         mode: "System",
         osType: "Linux",
         osDiskSizeGB: 30,
@@ -71,25 +71,32 @@ const aksCluster = new azure.containerservice.ManagedCluster("aks-cluster", {
 const acrPullRole = new azure.authorization.RoleAssignment("aks-acr-pull", {
     principalId: aksCluster.identityProfile.apply(ip => ip?.kubeletidentity?.objectId || ""),
     principalType: "ServicePrincipal",
-    roleDefinitionId: pulumi.interpolate`/subscriptions/${azure.authorization.getClientConfig().then(c => c.subscriptionId)}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d`, // AcrPull role
+    roleDefinitionId: pulumi.interpolate`/subscriptions/${azure.authorization.getClientConfig().then(c => c.subscriptionId)}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d`,
     scope: registry.id,
 });
 
-// Get AKS credentials
-const creds = pulumi.all([resourceGroup.name, aksCluster.name]).apply(([rgName, clusterName]) =>
-    azure.containerservice.listManagedClusterUserCredentials({
+// Get AKS credentials - FIXED
+const creds = pulumi.all([resourceGroup.name, aksCluster.name]).apply(async ([rgName, clusterName]) => {
+    const result = await azure.containerservice.listManagedClusterUserCredentials({
         resourceGroupName: rgName,
         resourceName: clusterName,
-    })
-);
+    });
+    return result;
+});
 
-const kubeconfig = creds.kubeconfigs[0].value.apply(enc => Buffer.from(enc, "base64").toString());
+const kubeconfig = creds.apply(result => {
+    if (!result || !result.kubeconfigs || result.kubeconfigs.length === 0) {
+        throw new Error("No kubeconfig found in credentials");
+    }
+    const encoded = result.kubeconfigs[0].value;
+    return Buffer.from(encoded, "base64").toString();
+});
 
 // Create a Kubernetes provider instance using the AKS cluster's kubeconfig
 const k8sProvider = new k8s.Provider("k8s-provider", {
     kubeconfig: kubeconfig,
     enableServerSideApply: true,
-});
+}, { dependsOn: [aksCluster] });
 
 // Create Namespace
 const namespace = new k8s.core.v1.Namespace("microservices-namespace", {
@@ -100,7 +107,7 @@ const namespace = new k8s.core.v1.Namespace("microservices-namespace", {
             environment: pulumi.getStack(),
         },
     },
-}, { provider: k8sProvider, dependsOn: [aksCluster] });
+}, { provider: k8sProvider, dependsOn: [k8sProvider] });
 
 // Create ConfigMap
 const configMap = new k8s.core.v1.ConfigMap("app-config", {
