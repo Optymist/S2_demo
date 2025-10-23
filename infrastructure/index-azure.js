@@ -1,4 +1,4 @@
-const pulumi = require("@pulumi/pulumi");
+import * as pulumi from "@pulumi/pulumi";
 const azure = require("@pulumi/azure-native");
 const k8s = require("@pulumi/kubernetes");
 
@@ -9,6 +9,9 @@ const resourceGroupName = config.get("resourceGroupName") || "microservices-demo
 const aksClusterName = config.get("aksClusterName") || "microservices-aks";
 const acrName = config.get("acrName") || "microservicesacr";
 const nodeSize = config.get("nodeSize") || "Standard_D2s_v5";
+
+const aksCfg = new pulumi.Config("aks");
+const nodeVmSize = aksCfg.get("nodeVmSize") || "Standard_DC2s_v3"; // default to an allowed size
 
 // Create an Azure Resource Group
 const resourceGroup = new azure.resources.ResourceGroup("resource-group", {
@@ -41,16 +44,16 @@ const aksCluster = new azure.containerservice.ManagedCluster("aks-cluster", {
     resourceName: aksClusterName,
     location: resourceGroup.location,
     dnsPrefix: "microservices",
-    agentPoolProfiles: [{
-        name: "agentpool",
-        count: 1,
-        vmSize: nodeSize,
-        mode: "System",
-        osType: "Linux",
-        osDiskSizeGB: 30,
-        type: "VirtualMachineScaleSets",
-        enableAutoScaling: false,
-    }],
+    agentPoolProfiles: [
+        {
+            name: "nodepool1",
+            count: 2,
+            mode: "System",
+            osType: "Linux",
+            type: "VirtualMachineScaleSets",
+            vmSize: nodeVmSize, // was "Standard_D2s_v5"
+        },
+    ],
     identity: {
         type: "SystemAssigned",
     },

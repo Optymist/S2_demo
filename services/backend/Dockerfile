@@ -10,7 +10,7 @@ RUN npm ci --omit=dev
 
 # Copy application code
 COPY . .
-
+ENV DD_IAST_ENABLED=true
 # Expose port
 EXPOSE 3001
 
