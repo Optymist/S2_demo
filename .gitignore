@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Testing
+coverage/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+
+# Pulumi
+.pulumi/
+Pulumi.*.yaml
+
+# Temporary files
+tmp/
+temp/
+*.tmp

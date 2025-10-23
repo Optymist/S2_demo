@@ -1,0 +1,83 @@
+name: Infrastructure Provisioning
+
+on:
+  push:
+    paths:
+      - 'infrastructure/**'
+  workflow_dispatch:
+
+env:
+  PULUMI_STACK: dev
+  PULUMI_PROJECT: microservices-demo
+  PULUMI_BACKEND_URL: azblob://pulumi-state
+  AZURE_RESOURCE_GROUP: microservices-demo-rg
+  LOCATION: eastus
+
+jobs:
+  provision:
+    name: Provision Infra with Pulumi
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Install Pulumi CLI
+        uses: pulumi/actions@v5
+
+      - name: Login to Pulumi Backend
+        run: pulumi login "${{ env.PULUMI_BACKEND_URL }}"
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+
+      - name: Install Dependencies
+        working-directory: infrastructure
+        run: npm ci
+
+      - name: Select Pulumi Stack
+        working-directory: infrastructure
+        run: |
+          pulumi stack select ${{ env.PULUMI_STACK }} || pulumi stack init ${{ env.PULUMI_STACK }}
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+
+      - name: Pulumi Preview
+        working-directory: infrastructure
+        run: pulumi preview -s ${{ env.PULUMI_STACK }}
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Pulumi Up
+        working-directory: infrastructure
+        run: pulumi up -s ${{ env.PULUMI_STACK }} --yes
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: Export Stack Outputs
+        working-directory: infrastructure
+        run: pulumi stack output --json
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

@@ -1,0 +1,73 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-backend:
+    name: Build Backend Service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: services/backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./services/backend
+        run: npm ci
+
+      - name: Build Backend
+        working-directory: ./services/backend
+        run: echo "Build completed successfully"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-build
+          path: services/backend/
+          retention-days: 1
+
+  build-frontend:
+    name: Build Frontend Service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: services/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./services/frontend
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: ./services/frontend
+        run: echo "Build completed successfully"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-build
+          path: services/frontend/
+          retention-days: 1

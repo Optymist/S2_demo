@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microservices Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-align: center;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .status-dot.active {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .message {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .message.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tech-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Microservices Demo</h1>
+        <p class="subtitle">Simple, Secure, and Scalable Architecture</p>
+        
+        <div class="card">
+            <h2>Service Status</h2>
+            <div class="status">
+                <div class="status-dot active" id="frontend-status"></div>
+                <strong>Frontend Service:</strong> <span id="frontend-text">Running</span>
+            </div>
+            <div class="status">
+                <div class="status-dot" id="backend-status"></div>
+                <strong>Backend API:</strong> <span id="backend-text">Checking...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Technology Stack</h2>
+            <div class="tech-stack">
+                <span class="tech-badge">Node.js</span>
+                <span class="tech-badge">Docker</span>
+                <span class="tech-badge">Kubernetes</span>
+                <span class="tech-badge">Pulumi</span>
+                <span class="tech-badge">Trivy</span>
+                <span class="tech-badge">GitHub Actions</span>
+            </div>
+        </div>
+
+        <button onclick="testBackend()" id="test-btn">Test Backend Connection</button>
+        
+        <div class="message" id="message"></div>
+    </div>
+
+    <script>
+        let backendUrl = '';
+
+        // Get backend URL from config
+        fetch('/api/config')
+            .then(res => res.json())
+            .then(config => {
+                backendUrl = config.backendUrl;
+                checkBackendHealth();
+            });
+
+        function checkBackendHealth() {
+            fetch(`${backendUrl}/health`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('backend-status').classList.add('active');
+                    document.getElementById('backend-text').textContent = 'Running';
+                })
+                .catch(err => {
+                    document.getElementById('backend-status').classList.remove('active');
+                    document.getElementById('backend-text').textContent = 'Unavailable';
+                });
+        }
+
+        function testBackend() {
+            const btn = document.getElementById('test-btn');
+            const msg = document.getElementById('message');
+            
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            fetch(`${backendUrl}/api/message`)
+                .then(res => res.json())
+                .then(data => {
+                    msg.textContent = `✓ Success! ${data.message}`;
+                    msg.className = 'message show';
+                    setTimeout(() => msg.classList.remove('show'), 5000);
+                })
+                .catch(err => {
+                    msg.textContent = `✗ Error: Could not connect to backend service`;
+                    msg.className = 'message show';
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Test Backend Connection';
+                });
+        }
+
+        // Check backend health every 30 seconds
+        setInterval(checkBackendHealth, 30000);
+    </script>
+</body>
+</html>
