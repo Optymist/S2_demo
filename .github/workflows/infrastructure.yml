@@ -52,7 +52,9 @@ jobs:
       - name: Install Dependencies
         working-directory: infrastructure
         run: npm install
-
+      - name: Set AKS VM Size
+        working-directory: infrastructure
+        run: pulumi config set nodeVmSize Standard_DC2s_v3 --stack ${{ env.PULUMI_STACK }} --non-interactive || true
       - name: Select or Init Stack
         working-directory: infrastructure
         run: |
