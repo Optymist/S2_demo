@@ -22,14 +22,15 @@ This document summarizes the Datadog integration added to the microservices depl
 
 ### 2. Datadog Agent Deployment
 
-**Kubernetes DaemonSet** (`k8s/datadog-agent.yaml`):
-- Runs on every node in the cluster
-- APM collection on port 8126
-- DogStatsD metrics on port 8125
-- Log collection from all containers
+**Kubernetes DatadogAgent CRD** (`k8s/datadog-agent.yaml`):
+- Uses DatadogAgent Custom Resource v2alpha1 (managed by Datadog Operator)
+- Configured for Datadog site: us5.datadoghq.com
+- APM collection enabled automatically
+- DogStatsD metrics collection
+- Log collection from all containers with `containerCollectAll: true`
 - Kubernetes events monitoring
-- Process monitoring
-- Leader election for cluster-level metrics
+- AKS-specific admission controller with `DD_ADMISSION_CONTROLLER_ADD_AKS_SELECTORS`
+- Simplified configuration compared to manual DaemonSet approach
 
 **Docker Compose Service**:
 - Datadog agent container for local development
@@ -178,6 +179,14 @@ open https://app.datadoghq.com/
 
 ### Kubernetes
 
+**Prerequisites**:
+```bash
+# Install the Datadog Operator
+helm repo add datadog https://helm.datadoghq.com
+helm repo update
+helm install datadog-operator datadog/datadog-operator
+```
+
 **Setup**:
 ```bash
 # Create secret
@@ -185,7 +194,7 @@ kubectl create secret generic datadog-secret \
   --from-literal=api-key='YOUR_KEY' \
   --namespace=microservices-demo
 
-# Deploy agent
+# Deploy agent using DatadogAgent CRD
 kubectl apply -f k8s/datadog-agent.yaml
 
 # Deploy services
@@ -344,10 +353,12 @@ const tracer = require('dd-trace').init({
 
 ### 2. Kubernetes Manifests
 
-**Agent DaemonSet**:
-- RBAC permissions
-- Service account
-- Volume mounts for logs
+**Agent DatadogAgent CRD**:
+- Managed by Datadog Operator (no manual RBAC/ServiceAccount needed)
+- Declarative configuration using v2alpha1 API
+- Automatic volume mounts and permissions
+- Site-specific configuration (us5.datadoghq.com)
+- Feature toggles (log collection, admission controller)
 
 **Application Deployments**:
 - Environment variables
