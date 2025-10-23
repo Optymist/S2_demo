@@ -8,6 +8,7 @@ const location = config.get("location") || "eastus";
 const resourceGroupName = config.get("resourceGroupName") || "microservices-demo-rg";
 const aksClusterName = config.get("aksClusterName") || "microservices-aks";
 const acrName = config.get("acrName") || "microservicesacr";
+const nodeSize = config.get("nodeSize") || "Standard_D2s_v5";
 
 // Create an Azure Resource Group
 const resourceGroup = new azure.resources.ResourceGroup("resource-group", {
@@ -43,7 +44,7 @@ const aksCluster = new azure.containerservice.ManagedCluster("aks-cluster", {
     agentPoolProfiles: [{
         name: "agentpool",
         count: 1,
-        vmSize: "Standard_B2s",
+        vmSize: nodeSize,
         mode: "System",
         osType: "Linux",
         osDiskSizeGB: 30,
