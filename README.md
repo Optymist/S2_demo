@@ -54,6 +54,19 @@ This project demonstrates a complete microservices architecture with:
 
 ### Local Development with Docker Compose
 
+**Option 1: Using the quick start script (Recommended)**
+```bash
+# Clone repository
+git clone https://github.com/WandileM7/S2_demo.git
+cd S2_demo
+
+# Run quick start script
+./quickstart.sh
+# Follow the interactive menu
+```
+
+**Option 2: Manual start**
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/WandileM7/S2_demo.git
@@ -316,7 +329,11 @@ S2_demo/
 │   ├── Pulumi.yaml
 │   └── package.json
 ├── docker-compose.yml          # Local development
-└── README.md
+├── quickstart.sh               # Quick start script
+├── README.md                   # This file
+├── ARCHITECTURE.md             # Architecture details
+├── DEPLOYMENT.md               # Deployment guide
+└── CONTRIBUTING.md             # Contribution guidelines
 ```
 
 ## 🔧 Configuration
@@ -408,12 +425,31 @@ kubectl scale deployment frontend -n microservices-demo --replicas=2
 
 MIT License - feel free to use this project for learning and development.
 
+## 📚 Additional Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture and design decisions
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment guide
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributors
+
 ## 🙏 Acknowledgments
 
 - Built with modern DevOps best practices
 - Security-first approach with Trivy
 - Infrastructure as Code with Pulumi
 - Elegant and simple architecture
+
+## 🌟 Features Highlights
+
+- ✅ **Complete CI/CD Pipeline** with GitHub Actions
+- ✅ **Security Scanning** with Trivy (container & filesystem)
+- ✅ **Infrastructure as Code** with Pulumi
+- ✅ **Docker & Kubernetes** ready
+- ✅ **Rate Limiting** for DDoS protection
+- ✅ **Health Checks** for reliability
+- ✅ **Minimal Dependencies** for security
+- ✅ **Comprehensive Tests** with Jest
+- ✅ **Production Ready** configuration
+- ✅ **Easy to Deploy** with multiple options
 
 ---
 
