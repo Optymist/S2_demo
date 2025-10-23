@@ -37,9 +37,13 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Install Pulumi CLI
-        uses: pulumi/actions@v5
+        run: curl -fsSL https://get.pulumi.com | sh
+        shell: bash
 
-      - name: Login to Pulumi Backend
+      - name: Add Pulumi to PATH
+        run: echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+
+      - name: Login to Pulumi Backend (Azure Blob)
         run: pulumi login "${{ env.PULUMI_BACKEND_URL }}"
         env:
           AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
@@ -49,35 +53,20 @@ jobs:
         working-directory: infrastructure
         run: npm ci
 
-      - name: Select Pulumi Stack
+      - name: Select or Init Stack
         working-directory: infrastructure
         run: |
-          pulumi stack select ${{ env.PULUMI_STACK }} || pulumi stack init ${{ env.PULUMI_STACK }}
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          pulumi stack select ${{ env.PULUMI_STACK }} || \
+          pulumi stack init ${{ env.PULUMI_STACK }}
 
       - name: Pulumi Preview
         working-directory: infrastructure
         run: pulumi preview -s ${{ env.PULUMI_STACK }}
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
-      - name: Pulumi Up
+      - name: Pulumi Up (Apply Infra)
         working-directory: infrastructure
         run: pulumi up -s ${{ env.PULUMI_STACK }} --yes
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: Export Stack Outputs
         working-directory: infrastructure
-        run: pulumi stack output --json
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: pulumi stack output --json > stack-outputs.json
