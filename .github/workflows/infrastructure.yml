@@ -12,6 +12,8 @@ env:
   PULUMI_BACKEND_URL: azblob://pulumi-state
   AZURE_RESOURCE_GROUP: microservices-demo-rg
   LOCATION: eastus
+  AZURE_STORAGE_ACCOUNT: pulumistatestorage001
+  AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
 
 jobs:
   provision:
