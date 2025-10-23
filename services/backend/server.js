@@ -1,3 +1,11 @@
+// Initialize Datadog tracer first (before other imports)
+const tracer = require('dd-trace').init({
+  logInjection: true,
+  analytics: true,
+  runtimeMetrics: true,
+  profiling: process.env.DD_PROFILING_ENABLED === 'true'
+});
+
 const express = require('express');
 const cors = require('cors');
 

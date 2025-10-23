@@ -449,6 +449,7 @@ MIT License - feel free to use this project for learning and development.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture and design decisions
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment guide
 - **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** - Azure-specific deployment guide
+- **[DATADOG_SETUP.md](DATADOG_SETUP.md)** - Datadog observability setup guide
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributors
 
 ## 🙏 Acknowledgments
@@ -470,6 +471,7 @@ MIT License - feel free to use this project for learning and development.
 - ✅ **Comprehensive Tests** with Jest
 - ✅ **Production Ready** configuration
 - ✅ **Easy to Deploy** with multiple options
+- ✅ **Datadog Integration** for observability and logs
 
 ---
 
