@@ -6,8 +6,8 @@ const cfg = new pulumi.Config();
 const location = cfg.get("location") || process.env.LOCATION || "eastus";
 const resourceGroupName = cfg.get("resourceGroupName") || "microservices-demo-rg";
 const aksName = cfg.get("aksName") || "microservices-demo-aks";
-const nodeCount = cfg.getNumber("nodeCount") || 2;
-const nodeSize = cfg.get("nodeSize") || "Standard_DS2_v2";
+const nodeCount = cfg.getNumber("nodeCount") || 1;
+const nodeSize = cfg.get("nodeSize") || "Standard_B2s";
 const dnsPrefix = cfg.get("dnsPrefix") || `${aksName}-dns`;
 
 // 1) Resource Group
@@ -22,7 +22,7 @@ const aks = new azure.containerservice.ManagedCluster("aks", {
   location,
   dnsPrefix,
   identity: { type: "SystemAssigned" },
-  sku: { name: "Base", tier: "Free" }, // optional; remove if not supported by your API version
+  // sku: { name: "Base", tier: "Free" }, // optional; can cause issues; keep commented if unsupported
   apiServerAccessProfile: { enablePrivateCluster: false },
   // Default system node pool
   defaultNodePool: {
@@ -31,8 +31,12 @@ const aks = new azure.containerservice.ManagedCluster("aks", {
     nodeCount,
     type: "VirtualMachineScaleSets",
     mode: "System",
-    orchestratorVersion: "1.29", // optional; omit to let Azure choose
+    // orchestratorVersion: "1.29", // let Azure choose to avoid region incompatibility
   },
+  enableRBAC: true,
+}, {
+  // AKS create can take 10–20+ minutes
+  customTimeouts: { create: "60m", update: "60m", delete: "60m" },
 });
 
 // 3) Get kubeconfig (admin)
