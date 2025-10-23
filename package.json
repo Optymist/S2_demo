@@ -1,0 +1,27 @@
+{
+  "name": "s2-demo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install",
+    "trivy:scan": "node .github/scripts/trivy-scan.js",
+    "security:check": "npm run trivy:scan"
+  },
+  "devDependencies": {
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0",
+    "eslint": "^8.50.0",
+    "adm-zip": "^0.5.10",
+    "tar": "^6.2.0"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}

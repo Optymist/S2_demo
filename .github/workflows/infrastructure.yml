@@ -49,31 +49,51 @@ jobs:
           AZURE_STORAGE_ACCOUNT: ${{ env.AZURE_STORAGE_ACCOUNT }}
           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
 
+      - name: Select or Init Stack
+        id: stack
+        working-directory: infrastructure
+        shell: bash
+        run: |
+          set -euo pipefail
+          if pulumi stack select "${PULUMI_STACK}" --non-interactive; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+          else
+            pulumi stack init "${PULUMI_STACK}" --non-interactive
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stack exists; skip provisioning
+        if: steps.stack.outputs.created == 'false'
+        run: echo "Pulumi stack '${{ env.PULUMI_STACK }}' already exists. Skipping infrastructure provisioning."
+
       - name: Install Dependencies
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: npm install
+
       - name: Set AKS VM Size
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: pulumi config set nodeVmSize Standard_DC2s_v3 --stack ${{ env.PULUMI_STACK }} --non-interactive || true
-      - name: Select or Init Stack
-        working-directory: infrastructure
-        run: |
-          pulumi stack select ${{ env.PULUMI_STACK }} || pulumi stack init ${{ env.PULUMI_STACK }}
 
       - name: Set Pulumi Config (idempotent)
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: |
           pulumi config set location ${{ env.LOCATION }} --stack ${{ env.PULUMI_STACK }} --non-interactive || true
           pulumi config set resourceGroupName ${{ env.AZURE_RESOURCE_GROUP }} --stack ${{ env.PULUMI_STACK }} --non-interactive || true
 
       - name: Pulumi Preview
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: pulumi preview -s ${{ env.PULUMI_STACK }}
 
       - name: Pulumi Up (Apply Infra)
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: pulumi up -s ${{ env.PULUMI_STACK }} --yes
 
       - name: Export Stack Outputs
+        if: steps.stack.outputs.created == 'true'
         working-directory: infrastructure
         run: pulumi stack output --json > stack-outputs.json
