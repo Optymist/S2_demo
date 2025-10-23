@@ -43,8 +43,18 @@ const credentials = pulumi.all([resourceGroup.name, registry.name]).apply(([rgNa
     })
 );
 
-const adminUsername = credentials.apply(c => c.username!);
-const adminPassword = credentials.apply(c => c.passwords![0].value!);
+const adminUsername = credentials.apply(c => {
+    if (!c.username) {
+        throw new Error("Azure Container Registry credentials missing username.");
+    }
+    return c.username;
+});
+const adminPassword = credentials.apply(c => {
+    if (!c.passwords || !Array.isArray(c.passwords) || c.passwords.length === 0 || !c.passwords[0].value) {
+        throw new Error("Azure Container Registry credentials missing password.");
+    }
+    return c.passwords[0].value;
+});
 
 // Create an App Service Plan (Linux-based for containers)
 const appServicePlan = new azure.web.AppServicePlan("app-service-plan", {
