@@ -14,8 +14,8 @@
   "license": "MIT",
   "dependencies": {
     "@pulumi/pulumi": "^3.100.0",
-    "@pulumi/kubernetes": "^4.5.0",
-    "@pulumi/docker": "^4.5.0",
-    "@pulumi/azure-native": "^2.28.0"
+    "@pulumi/kubernetes": "^4.9.0",
+    "@pulumi/docker": "^4.9.0",
+    "@pulumi/azure-native": "3.8.0"
   }
 }

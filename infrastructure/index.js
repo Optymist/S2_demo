@@ -1,34 +1,74 @@
 const pulumi = require("@pulumi/pulumi");
+const azure = require("@pulumi/azure-native");
 const k8s = require("@pulumi/kubernetes");
 
-// Configuration
-const config = new pulumi.Config();
-const appName = "microservices-demo";
-const namespace = "microservices-demo";
+const cfg = new pulumi.Config();
+const location = cfg.get("location") || process.env.LOCATION || "eastus";
+const resourceGroupName = cfg.get("resourceGroupName") || "microservices-demo-rg";
+const aksName = cfg.get("aksName") || "microservices-demo-aks";
+const nodeCount = cfg.getNumber("nodeCount") || 2;
+const nodeSize = cfg.get("nodeSize") || "Standard_DS2_v2";
+const dnsPrefix = cfg.get("dnsPrefix") || `${aksName}-dns`;
 
-// Create Kubernetes Provider (uses default kubeconfig)
-const provider = new k8s.Provider("k8s-provider", {
-    enableServerSideApply: true,
+// 1) Resource Group
+const rg = new azure.resources.ResourceGroup("rg", {
+  resourceGroupName,
+  location,
 });
 
-// Create Namespace
-const ns = new k8s.core.v1.Namespace("microservices-namespace", {
-    metadata: {
-        name: namespace,
-        labels: {
-            name: namespace,
-            environment: "production",
-        },
-    },
-}, { provider });
+// 2) AKS (Managed Identity)
+const aks = new azure.containerservice.ManagedCluster("aks", {
+  resourceGroupName: rg.name,
+  location,
+  dnsPrefix,
+  identity: { type: "SystemAssigned" },
+  sku: { name: "Base", tier: "Free" }, // optional; remove if not supported by your API version
+  apiServerAccessProfile: { enablePrivateCluster: false },
+  // Default system node pool
+  defaultNodePool: {
+    name: "systempool",
+    vmSize: nodeSize,
+    nodeCount,
+    type: "VirtualMachineScaleSets",
+    mode: "System",
+    orchestratorVersion: "1.29", // optional; omit to let Azure choose
+  },
+});
+
+// 3) Get kubeconfig (admin)
+const creds = pulumi
+  .all([rg.name, aks.name])
+  .apply(([rgName, clusterName]) =>
+    azure.containerservice.listManagedClusterAdminCredentials({
+      resourceGroupName: rgName,
+      resourceName: clusterName,
+    })
+  );
+
+const kubeconfig = creds.kubeconfigs[0].value.apply((enc) =>
+  Buffer.from(enc, "base64").toString()
+);
+
+// 4) Kubernetes provider targeting the new AKS
+const k8sProvider = new k8s.Provider("aks-provider", {
+  kubeconfig,
+});
+
+// 5) Deploy your Kubernetes resources using the provider
+// If you already have these resources in this file, add `{ provider: k8sProvider }` to their options.
+const ns = new k8s.core.v1.Namespace(
+  "microservices-namespace",
+  { metadata: { name: "microservices-demo" } },
+  { provider: k8sProvider }
+);
 
 // ConfigMap for application configuration
 const appConfig = new k8s.core.v1.ConfigMap("app-config", {
     metadata: {
         name: "app-config",
-        namespace: namespace,
+        namespace: "microservices-demo",
         labels: {
-            app: appName,
+            app: "microservices-demo",
         },
     },
     data: {
@@ -36,13 +76,13 @@ const appConfig = new k8s.core.v1.ConfigMap("app-config", {
         NODE_ENV: "production",
         LOG_LEVEL: "info",
     },
-}, { provider, dependsOn: [ns] });
+}, { provider: k8sProvider, dependsOn: [ns] });
 
 // Backend Deployment
 const backendDeployment = new k8s.apps.v1.Deployment("backend-deployment", {
     metadata: {
         name: "backend",
-        namespace: namespace,
+        namespace: "microservices-demo",
         labels: {
             app: "backend",
             version: "v1",
@@ -110,13 +150,13 @@ const backendDeployment = new k8s.apps.v1.Deployment("backend-deployment", {
             },
         },
     },
-}, { provider, dependsOn: [ns] });
+}, { provider: k8sProvider, dependsOn: [ns] });
 
 // Backend Service
 const backendService = new k8s.core.v1.Service("backend-service", {
     metadata: {
         name: "backend",
-        namespace: namespace,
+        namespace: "microservices-demo",
         labels: {
             app: "backend",
         },
@@ -133,13 +173,13 @@ const backendService = new k8s.core.v1.Service("backend-service", {
             name: "http",
         }],
     },
-}, { provider, dependsOn: [ns] });
+}, { provider: k8sProvider, dependsOn: [ns] });
 
 // Frontend Deployment
 const frontendDeployment = new k8s.apps.v1.Deployment("frontend-deployment", {
     metadata: {
         name: "frontend",
-        namespace: namespace,
+        namespace: "microservices-demo",
         labels: {
             app: "frontend",
             version: "v1",
@@ -208,13 +248,13 @@ const frontendDeployment = new k8s.apps.v1.Deployment("frontend-deployment", {
             },
         },
     },
-}, { provider, dependsOn: [ns, backendService] });
+}, { provider: k8sProvider, dependsOn: [ns, backendService] });
 
 // Frontend Service (LoadBalancer)
 const frontendService = new k8s.core.v1.Service("frontend-service", {
     metadata: {
         name: "frontend",
-        namespace: namespace,
+        namespace: "microservices-demo",
         labels: {
             app: "frontend",
         },
@@ -231,12 +271,13 @@ const frontendService = new k8s.core.v1.Service("frontend-service", {
             name: "http",
         }],
     },
-}, { provider, dependsOn: [ns] });
+}, { provider: k8sProvider, dependsOn: [ns] });
 
 // Export the frontend service endpoint
 exports.frontendUrl = frontendService.status.loadBalancer.ingress[0].apply(
     ingress => ingress.hostname || ingress.ip
 );
-exports.namespace = namespace;
-exports.backendServiceName = backendService.metadata.name;
-exports.frontendServiceName = frontendService.metadata.name;
+exports.resourceGroup = rg.name;
+exports.aksName = aks.name;
+exports.namespace = ns.metadata.name;
+exports.kubeconfig = kubeconfig; // avoid exporting in prod; kept for debugging

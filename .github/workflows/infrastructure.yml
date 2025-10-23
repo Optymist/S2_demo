@@ -1,9 +1,6 @@
 name: Infrastructure Provisioning
 
 on:
-  push:
-    paths:
-      - 'infrastructure/**'
   workflow_dispatch:
 
 env:
@@ -34,7 +31,7 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Azure Login
+      - name: Azure Login (OIDC or SPN)
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -49,7 +46,7 @@ jobs:
       - name: Login to Pulumi Backend (Azure Blob)
         run: pulumi login "${{ env.PULUMI_BACKEND_URL }}"
         env:
-          AZURE_STORAGE_ACCOUNT: pulumistatestorage001
+          AZURE_STORAGE_ACCOUNT: ${{ env.AZURE_STORAGE_ACCOUNT }}
           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
 
       - name: Install Dependencies
@@ -59,8 +56,13 @@ jobs:
       - name: Select or Init Stack
         working-directory: infrastructure
         run: |
-          pulumi stack select ${{ env.PULUMI_STACK }} || \
-          pulumi stack init ${{ env.PULUMI_STACK }}
+          pulumi stack select ${{ env.PULUMI_STACK }} || pulumi stack init ${{ env.PULUMI_STACK }}
+
+      - name: Set Pulumi Config (idempotent)
+        working-directory: infrastructure
+        run: |
+          pulumi config set location ${{ env.LOCATION }} --stack ${{ env.PULUMI_STACK }} --non-interactive || true
+          pulumi config set resourceGroupName ${{ env.AZURE_RESOURCE_GROUP }} --stack ${{ env.PULUMI_STACK }} --non-interactive || true
 
       - name: Pulumi Preview
         working-directory: infrastructure
