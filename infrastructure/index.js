@@ -7,8 +7,8 @@ const cfg = new pulumi.Config();
 const location = cfg.get("location") || process.env.LOCATION || "eastus";
 const resourceGroupName = cfg.get("resourceGroupName") || "microservices-demo-rg";
 const aksName = cfg.get("aksName") || "microservices-demo-aks";
-const nodeCount = cfg.getNumber("nodeCount") || 2;
-const nodeSize = cfg.get("nodeSize") || "Standard_DS2_v2";
+const nodeCount = cfg.getNumber("nodeCount") || 1;
+const nodeSize = cfg.get("nodeSize") || "Standard_B2s";
 const dnsPrefix = cfg.get("dnsPrefix") || `${aksName}-dns`;
 
 // 1) Resource Group
@@ -23,32 +23,38 @@ const aks = new azure.containerservice.ManagedCluster("aks", {
   location,
   dnsPrefix,
   identity: { type: "SystemAssigned" },
-  defaultNodePool: {
+
+  // Use agentPoolProfiles to satisfy API contract
+  agentPoolProfiles: [{
     name: "systempool",
     vmSize: nodeSize,
-    nodeCount,
+    count: nodeCount,
     type: "VirtualMachineScaleSets",
     mode: "System",
-  },
+    osType: "Linux",
+  }],
+
   enableRBAC: true,
 }, {
-  // AKS create can take 10–20+ minutes
   customTimeouts: { create: "60m", update: "60m", delete: "60m" },
 });
 
 // 3) Kubeconfig for the new AKS
-const creds = pulumi.all([rg.name, aks.name]).apply(([rgName, clusterName]) =>
-  azure.containerservice.listManagedClusterAdminCredentials({
-    resourceGroupName: rgName,
-    resourceName: clusterName,
-  })
-);
-const kubeconfig = creds.kubeconfigs[0].value.apply((b64) =>
-  Buffer.from(b64, "base64").toString()
-);
+const kubeconfig = pulumi
+  .all([rg.name, aks.name])
+  .apply(async ([rgName, clusterName]) => {
+    const res = await azure.containerservice.listManagedClusterAdminCredentials({
+      resourceGroupName: rgName,
+      resourceName: clusterName,
+    });
+    if (!res.kubeconfigs?.[0]?.value) {
+      throw new Error("No kubeconfig returned from AKS");
+    }
+    return Buffer.from(res.kubeconfigs[0].value, "base64").toString("utf8");
+  });
 
 // 4) Kubernetes provider targeting AKS
-const k8sProvider = new k8s.Provider("aks-provider", { kubeconfig });
+const k8sProvider = new k8s.Provider("aks-provider", { kubeconfig }, { dependsOn: aks });
 
 // 5) Apply your existing YAML manifests using the provider
 const appManifests = new k8s.yaml.ConfigGroup(
