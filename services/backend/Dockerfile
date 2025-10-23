@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies (ignore cert warnings in CI environment)
-RUN npm config set strict-ssl false && npm ci --omit=dev
+# Install only production dependencies
+RUN npm ci --omit=dev
 
 # Copy application code
 COPY . .
