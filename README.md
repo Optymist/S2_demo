@@ -167,7 +167,21 @@ docker run -d -p 3000:3000 --name frontend \
    kubectl delete namespace microservices-demo
    ```
 
-### Using Pulumi
+### Using Pulumi on Azure
+
+For Azure deployment with AKS, see **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** for complete guide.
+
+**Quick start:**
+```bash
+cd infrastructure
+npm install
+cp index-azure.js index.js  # Use Azure-specific infrastructure
+pulumi stack init dev
+pulumi config set location eastus
+pulumi up
+```
+
+### Using Pulumi (Generic Kubernetes)
 
 1. **Install dependencies**
    ```bash
@@ -231,33 +245,38 @@ trivy fs ./services/frontend
 
 ## 🔄 CI/CD Pipeline
 
-The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) includes:
+The CI/CD pipeline follows **separation of concerns** principle with dedicated workflows:
 
-### Pipeline Stages
+### Pipeline Structure
 
-1. **Build & Test**
-   - Install dependencies
-   - Run unit tests
-   - Upload test results
+1. **Build Workflow** (`.github/workflows/build.yml`)
+   - Builds backend and frontend services independently
+   - Uploads build artifacts
+   - Runs on push and PRs
 
-2. **Security Scan**
-   - Build Docker images
-   - Run Trivy vulnerability scanner
-   - Upload SARIF to GitHub Security
+2. **Test Workflow** (`.github/workflows/test.yml`)
+   - Executes unit tests for both services
+   - Generates coverage reports
+   - Runs on push and PRs
 
-3. **Build & Push** (on main branch)
-   - Build production images
-   - Push to GitHub Container Registry
+3. **Security Workflow** (`.github/workflows/security.yml`)
+   - Trivy container scanning
+   - Trivy filesystem scanning
+   - Infrastructure security scanning
+   - Runs on push, PRs, and scheduled daily
+   - Uploads SARIF reports to GitHub Security
 
-4. **Infrastructure Validation**
-   - Validate Pulumi configuration
-   - Preview infrastructure changes
+4. **Deploy Workflow** (`.github/workflows/deploy.yml`)
+   - Builds and pushes images to Azure Container Registry
+   - Deploys infrastructure with Pulumi
+   - Deploys application to AKS
+   - Runs on main branch push or manual trigger
 
 ### Workflow Triggers
 
-- Push to `main` or `develop` branches
-- Pull requests to `main` or `develop`
-- Manual workflow dispatch
+- **Build & Test**: Push to `main` or `develop`, PRs
+- **Security**: Push to `main` or `develop`, PRs, daily at 2 AM UTC
+- **Deploy**: Push to `main` branch, manual workflow dispatch
 
 ## 📊 API Endpoints
 
@@ -429,6 +448,7 @@ MIT License - feel free to use this project for learning and development.
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture and design decisions
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment guide
+- **[AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md)** - Azure-specific deployment guide
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributors
 
 ## 🙏 Acknowledgments
