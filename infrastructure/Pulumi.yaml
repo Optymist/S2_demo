@@ -1,0 +1,8 @@
+name: microservices-infrastructure
+runtime: nodejs
+description: Infrastructure as Code for Microservices Demo using Pulumi
+
+config:
+  kubernetes:kubeconfig:
+    description: Path to kubeconfig file (optional, uses default if not specified)
+    default: "~/.kube/config"
