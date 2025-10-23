@@ -9,7 +9,7 @@ on:
 env:
   PULUMI_STACK: dev
   PULUMI_PROJECT: microservices-demo
-  PULUMI_BACKEND_URL: azblob://pulumi-state
+  PULUMI_BACKEND_URL: azblob://pulumistatestorage001/pulumi-state
   AZURE_RESOURCE_GROUP: microservices-demo-rg
   LOCATION: eastus
 
