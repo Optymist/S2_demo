@@ -7,7 +7,7 @@ env:
   IMAGE_NAME_BACKEND: backend-service
   IMAGE_NAME_FRONTEND: frontend-service
   RESOURCE_GROUP: microservices-demo-rg
-  ACR_NAME: microservicesacr
+  ACR_NAME: demoday
   WEBAPP_NAME_BACKEND: microservices-backend
   WEBAPP_NAME_FRONTEND: microservices-frontend
   LOCATION: eastus
