@@ -8,7 +8,6 @@ const location = config.get("location") || "eastus";
 const resourceGroupName = config.get("resourceGroupName") || "microservices-demo-rg";
 const aksClusterName = config.get("aksClusterName") || "microservices-aks";
 const acrName = config.get("acrName") || "microservicesacr";
-const nodeSize = config.get("nodeSize") || "Standard_D2s_v5";
 
 const aksCfg = new pulumi.Config("aks");
 const nodeVmSize = aksCfg.get("nodeVmSize") || "Standard_DC2s_v3"; // default to an allowed size

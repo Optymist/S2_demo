@@ -8,7 +8,7 @@ const location = cfg.get("location") || process.env.LOCATION || "eastus";
 const resourceGroupName = cfg.get("resourceGroupName") || "microservices-demo-rg";
 const aksName = cfg.get("aksName") || "microservices-demo-aks";
 const nodeCount = cfg.getNumber("nodeCount") || 1;
-const nodeSize = cfg.get("nodeSize") || process.env.NODE_SIZE || "Standard_D2s_v5";
+const nodeSize = cfg.get("nodeSize") || process.env.NODE_SIZE || "Standard_DC2s_v3";
 const dnsPrefix = cfg.get("dnsPrefix") || `${aksName}-dns`;
 
 // 1) Resource Group
