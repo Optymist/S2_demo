@@ -1,5 +1,5 @@
 // Initialize Datadog tracer first (before other imports)
-const tracer = require('dd-trace').init({
+require('dd-trace').init({
   logInjection: true,
   analytics: true,
   runtimeMetrics: true,

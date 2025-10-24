@@ -5,9 +5,11 @@ metadata:
   namespace: microservices-demo
   labels:
     app: backend
-    version: v1
+    tags.datadoghq.com/env: "production"
+    tags.datadoghq.com/service: "backend-service"
+    tags.datadoghq.com/version: "1.0.0"
 spec:
-  replicas: 1  # Reduced from 2
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -15,12 +17,12 @@ spec:
     metadata:
       labels:
         app: backend
-        version: v1
-        tags.datadoghq.com/service: "backend-service"
         tags.datadoghq.com/env: "production"
+        tags.datadoghq.com/service: "backend-service"
         tags.datadoghq.com/version: "1.0.0"
       annotations:
         ad.datadoghq.com/backend.logs: '[{"source":"nodejs","service":"backend-service"}]'
+        ad.datadoghq.com/backend.tags: '{"env":"production","team":"backend"}'
     spec:
       securityContext:
         runAsNonRoot: true

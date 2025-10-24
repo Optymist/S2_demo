@@ -21,10 +21,38 @@ spec:
       apiSecret:
         secretName: datadog-secret
         keyName: api-key
+    kubelet:
+      tlsVerify: false
   features:
+    # Enable APM (Application Performance Monitoring) for traces
+    apm:
+      enabled: true
+      hostPortConfig:
+        enabled: true
+        hostPort: 8126
+    
+    # Enable Log Collection
     logCollection:
       enabled: true
       containerCollectAll: true
+      containerCollectUsingFiles: true
+    
+    # Enable Live Container Monitoring
+    liveContainerCollection:
+      enabled: true
+    
+    # Enable Orchestrator Explorer
+    orchestratorExplorer:
+      enabled: true
+    
+    # Enable Kubernetes State Metrics
+    kubeStateMetricsCore:
+      enabled: true
+    
+    # Enable Process Collection
+    processDiscovery:
+      enabled: true
+  
   override:
     clusterAgent:
       containers:
@@ -32,3 +60,25 @@ spec:
           env:
             - name: DD_ADMISSION_CONTROLLER_ADD_AKS_SELECTORS
               value: "true"
+            - name: DD_CLUSTER_CHECKS_ENABLED
+              value: "true"
+            - name: DD_EXTRA_CONFIG_PROVIDERS
+              value: "kube_endpoints kube_services"
+    
+    nodeAgent:
+      containers:
+        agent:
+          env:
+            - name: DD_DOGSTATSD_NON_LOCAL_TRAFFIC
+              value: "true"
+            - name: DD_PROCESS_AGENT_ENABLED
+              value: "true"
+            - name: DD_SYSTEM_PROBE_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
