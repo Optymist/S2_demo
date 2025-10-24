@@ -33,3 +33,6 @@ Pulumi.*.yaml
 tmp/
 temp/
 *.tmp
+tools/
+.cache/
+.docker-empty/

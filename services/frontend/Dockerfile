@@ -1,22 +1,26 @@
 FROM node:18-alpine
 
+# Create non-root user
+RUN addgroup -g 1000 appgroup && \
+    adduser -D -u 1000 -G appgroup appuser
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies (ignore cert warnings in CI environment)
-RUN npm config set strict-ssl false && npm i --omit=dev
+# Install dependencies
+RUN npm ci --only=production
 
-# Copy application code
+# Copy application files
 COPY . .
-ENV DD_IAST_ENABLED=true
-# Expose port
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Run the application
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
