@@ -1,107 +1,131 @@
-// Initialize Datadog tracer first (before other imports)
-require('dd-trace').init({
+// This line must come before importing any instrumented module.
+const tracer = require('dd-trace').init({
   logInjection: true,
   analytics: true,
   runtimeMetrics: true,
   profiling: process.env.DD_PROFILING_ENABLED === 'true',
+  sampleRate: parseFloat(process.env.DD_TRACE_SAMPLE_RATE) || 1,
+  appsec: process.env.DD_APPSEC_ENABLED === 'true',
+  iast: process.env.DD_IAST_ENABLED === 'true',
+  dataStreamsEnabled: process.env.DD_DATA_STREAMS_ENABLED === 'true',
+  serviceMapping: process.env.DD_TRACE_REMOVE_INTEGRATION_SERVICE_NAMES_ENABLED === 'true',
+  repositoryUrl: process.env.DD_GIT_REPOSITORY_URL,
 });
 
 const express = require('express');
 const path = require('path');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BACKEND_URL = process.env.BACKEND_URL || 'http://backend';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
-// Try to load axios, but don't crash if it's missing
-let axios;
-try {
-  axios = require('axios');
-} catch (e) {
-  console.warn('axios not available, backend proxy endpoints will be disabled');
-}
-
-// Middleware
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Logging middleware
+// Logging middleware with structured logging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  const logData = {
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path,
+    service: process.env.DD_SERVICE || 'frontend',
+    env: process.env.DD_ENV || 'development',
+  };
+  console.log(JSON.stringify(logData));
   next();
 });
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
-  console.log('Health check requested');
+  const healthData = {
+    level: 'info',
+    message: 'Health check requested',
+    service: process.env.DD_SERVICE || 'frontend',
+    timestamp: new Date().toISOString(),
+  };
+  console.log(JSON.stringify(healthData));
+
   res.json({
     status: 'healthy',
     service: 'frontend',
+    version: process.env.DD_VERSION || '1.0.0',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV,
-    backendUrl: BACKEND_URL,
-    axiosAvailable: !!axios,
-    datadogAgent: process.env.DD_AGENT_HOST || 'not configured',
+    features: {
+      apm: true,
+      profiling: process.env.DD_PROFILING_ENABLED === 'true',
+      appsec: process.env.DD_APPSEC_ENABLED === 'true',
+    },
   });
 });
 
-// Proxy endpoints to backend (only if axios is available)
-if (axios) {
-  app.get('/api/backend/health', async (req, res) => {
-    try {
-      console.log(`Proxying health check to backend: ${BACKEND_URL}/health`);
-      const response = await axios.get(`${BACKEND_URL}/health`, { timeout: 5000 });
-      res.json(response.data);
-    } catch (error) {
-      console.error('Backend health check error:', error.message);
-      res.status(error.response?.status || 500).json({
-        error: 'Backend service unavailable',
-        details: error.message,
-        backendUrl: BACKEND_URL,
-      });
-    }
-  });
+// Config endpoint
+app.get('/api/config', (req, res) => {
+  const logData = {
+    level: 'info',
+    message: 'Config requested',
+    service: process.env.DD_SERVICE || 'frontend',
+    timestamp: new Date().toISOString(),
+  };
+  console.log(JSON.stringify(logData));
 
-  app.get('/api/backend/message', async (req, res) => {
-    try {
-      console.log(`Proxying message request to backend: ${BACKEND_URL}/api/message`);
-      const response = await axios.get(`${BACKEND_URL}/api/message`, { timeout: 5000 });
-      res.json(response.data);
-    } catch (error) {
-      console.error('Backend message error:', error.message);
-      res.status(error.response?.status || 500).json({
-        error: 'Backend service unavailable',
-        details: error.message,
-        backendUrl: BACKEND_URL,
-      });
-    }
-  });
-} else {
-  app.get('/api/backend/*', (req, res) => {
-    res.status(503).json({ error: 'Backend proxy not available - axios not installed' });
-  });
-}
+  res.json({ backendUrl: BACKEND_URL });
+});
 
-// Serve index.html
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Proxy to backend
+app.get('/api/backend/message', async (req, res) => {
+  const logData = {
+    level: 'info',
+    message: 'Proxying request to backend',
+    service: process.env.DD_SERVICE || 'frontend',
+    backendUrl: BACKEND_URL,
+    timestamp: new Date().toISOString(),
+  };
+  console.log(JSON.stringify(logData));
+
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(`${BACKEND_URL}/api/message`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    const errorLog = {
+      level: 'error',
+      message: 'Backend request failed',
+      error: error.message,
+      service: process.env.DD_SERVICE || 'frontend',
+      timestamp: new Date().toISOString(),
+    };
+    console.error(JSON.stringify(errorLog));
+    res.status(500).json({ error: 'Backend service unavailable' });
+  }
 });
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  const errorLog = {
+    level: 'error',
+    message: 'Unhandled error',
+    error: err.message,
+    stack: err.stack,
+    service: process.env.DD_SERVICE || 'frontend',
+    timestamp: new Date().toISOString(),
+  };
+  console.error(JSON.stringify(errorLog));
+
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
 if (require.main === module) {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Frontend service listening on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`Backend URL: ${BACKEND_URL}`);
-    console.log(`Axios available: ${!!axios}`);
-    console.log(`Datadog Agent: ${process.env.DD_AGENT_HOST || 'Not configured'}`);
-    console.log(`Datadog Service: ${process.env.DD_SERVICE || 'Not set'}`);
+  app.listen(PORT, () => {
+    const startupLog = {
+      level: 'info',
+      message: 'Frontend service started',
+      port: PORT,
+      backendUrl: BACKEND_URL,
+      service: process.env.DD_SERVICE || 'frontend',
+      version: process.env.DD_VERSION || '1.0.0',
+      timestamp: new Date().toISOString(),
+    };
+    console.log(JSON.stringify(startupLog));
   });
 }
 

@@ -24,15 +24,6 @@ spec:
         ad.datadoghq.com/backend.logs: '[{"source":"nodejs","service":"backend-service"}]'
         ad.datadoghq.com/backend.tags: '{"env":"production","team":"backend"}'
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
-      imagePullSecrets:
-        - name: acr-pull
       containers:
         - name: backend
           image: backend-service:latest
@@ -53,73 +44,86 @@ spec:
               value: "3001"
             - name: NODE_ENV
               value: "production"
-            # Datadog configuration
+            # Datadog Agent Configuration
             - name: DD_AGENT_HOST
               valueFrom:
                 fieldRef:
                   fieldPath: status.hostIP
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+            - name: DD_SERVICE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/service']
+            - name: DD_VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/version']
+            # APM Configuration
             - name: DD_TRACE_AGENT_PORT
               value: "8126"
-            - name: DD_SERVICE
-              value: "backend-service"
-            - name: DD_ENV
-              value: "production"
-            - name: DD_VERSION
-              value: "1.0.0"
-            - name: DD_LOGS_INJECTION
+            - name: DD_TRACE_ENABLED
               value: "true"
             - name: DD_TRACE_SAMPLE_RATE
               value: "1"
+            - name: DD_TRACE_REMOVE_INTEGRATION_SERVICE_NAMES_ENABLED
+              value: "true"
+            # Logs Configuration
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            # Runtime Metrics
             - name: DD_RUNTIME_METRICS_ENABLED
               value: "true"
+            # Continuous Profiler
             - name: DD_PROFILING_ENABLED
-              value: "false"
-          volumeMounts:
-            - name: tmp
-              mountPath: /tmp
-            - name: cache
-              mountPath: /app/.npm
-          resources:
-            requests:
-              memory: "32Mi"
-              cpu: "25m"
-            limits:
-              memory: "128Mi"
-              cpu: "100m"
+              value: "true"
+            # Data Streams Monitoring
+            - name: DD_DATA_STREAMS_ENABLED
+              value: "true"
+            # App Security (RASP)
+            - name: DD_APPSEC_ENABLED
+              value: "true"
+            # IAST (Runtime Code Analysis)
+            - name: DD_IAST_ENABLED
+              value: "true"
+            # SCA (Software Composition Analysis)
+            - name: DD_APPSEC_SCA_ENABLED
+              value: "true"
+            # Git Repository
+            - name: DD_GIT_REPOSITORY_URL
+              value: "github.com/wandilem7/s2_demo"
           livenessProbe:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 2
-      volumes:
-        - name: tmp
-          emptyDir: {}
-        - name: cache
-          emptyDir: {}
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: backend
+  name: backend-service
   namespace: microservices-demo
-  labels:
-    app: backend
 spec:
-  type: ClusterIP
   selector:
     app: backend
   ports:
     - name: http
       port: 80
       targetPort: 3001
+  type: ClusterIP
