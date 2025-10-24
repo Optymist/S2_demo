@@ -52,10 +52,12 @@
             font-size: 1.3em;
         }
         .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
             display: flex;
             align-items: center;
             gap: 10px;
-            margin: 10px 0;
         }
         .status-dot {
             width: 12px;
@@ -127,6 +129,8 @@
             border-radius: 20px;
             font-size: 0.9em;
         }
+        .healthy { background-color: #d4edda; color: #155724; }
+        .unhealthy { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
@@ -158,6 +162,18 @@
             </div>
         </div>
 
+        <div>
+            <h2>Actions</h2>
+            <button onclick="checkFrontendHealth()">Check Frontend Health</button>
+            <button onclick="checkBackendHealth()">Check Backend Health</button>
+            <button onclick="getBackendMessage()">Get Backend Message</button>
+        </div>
+        
+        <div>
+            <h2>Response</h2>
+            <pre id="response"></pre>
+        </div>
+
         <button onclick="testBackend()" id="test-btn">Test Backend Connection</button>
         
         <div class="message" id="message"></div>
@@ -174,19 +190,51 @@
                 checkBackendHealth();
             });
 
+        function updateStatus(elementId, text, isHealthy) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = 'status ' + (isHealthy ? 'healthy' : 'unhealthy');
+        }
+        
+        async function checkFrontendHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                updateStatus('frontend-status', `Frontend is healthy. ${JSON.stringify(data)}`, true);
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                updateStatus('frontend-status', `Frontend error: ${error.message}`, false);
+                document.getElementById('response').textContent = error.message;
+            }
+        }
+        
         function checkBackendHealth() {
             fetch(`${backendUrl}/health`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('backend-status').classList.add('active');
                     document.getElementById('backend-text').textContent = 'Running';
+                    updateStatus('backend-status', `Backend is healthy. ${JSON.stringify(data)}`, true);
                 })
                 .catch(err => {
                     document.getElementById('backend-status').classList.remove('active');
                     document.getElementById('backend-text').textContent = 'Unavailable';
+                    updateStatus('backend-status', `Backend error: ${err.message}`, false);
                 });
         }
 
+        async function getBackendMessage() {
+            try {
+                // Call through frontend proxy
+                const response = await fetch('/api/backend/message');
+                const data = await response.json();
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('response').textContent = `Error: ${error.message}`;
+                console.error('Backend message fetch failed:', error);
+            }
+        }
+        
         function testBackend() {
             const btn = document.getElementById('test-btn');
             const msg = document.getElementById('message');
@@ -211,8 +259,15 @@
                 });
         }
 
-        // Check backend health every 30 seconds
-        setInterval(checkBackendHealth, 30000);
+        // Auto-check health on page load
+        checkFrontendHealth();
+        checkBackendHealth();
+        
+        // Periodic health checks every 30 seconds
+        setInterval(() => {
+            checkFrontendHealth();
+            checkBackendHealth();
+        }, 30000);
     </script>
 </body>
 </html>

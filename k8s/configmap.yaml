@@ -6,6 +6,6 @@ metadata:
   labels:
     app: microservices-demo
 data:
-  BACKEND_URL: "http://backend:3001"
+  BACKEND_URL: "http://backend"
   NODE_ENV: "production"
   LOG_LEVEL: "info"
