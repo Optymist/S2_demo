@@ -22,7 +22,7 @@ jobs:
         uses: azure/aks-set-context@v4
         with:
           resource-group: ${{ secrets.RESOURCE_GROUP }}
-          cluster-name: akse2cd7e70
+          cluster-name: aks7d0ec772
 
       - name: Install Helm
         uses: azure/setup-helm@v4
