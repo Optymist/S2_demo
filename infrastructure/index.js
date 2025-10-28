@@ -46,16 +46,24 @@ const aks = new azure.containerservice.ManagedCluster(
   }
 );
 
+const acr = new azure.containerregistry.Registry('acr', {
+  resourceGroupName: 'microservices-demo-rg',
+  registryName: acrName,
+  location,
+  sku: { name: 'Basic' },
+  adminUserEnabled: true,
+});
+
 // NEW: Grant AcrPull to the AKS kubelet identity so it can pull from ACR
 const clientCfg = azure.authorization.getClientConfigOutput();
-const acrId = pulumi.interpolate`/subscriptions/${clientCfg.subscriptionId}/resourceGroups/${acrResourceGroupName}/providers/Microsoft.ContainerRegistry/registries/${acrName}`;
+// const acrId = pulumi.interpolate`/subscriptions/${clientCfg.subscriptionId}/resourceGroups/${acrResourceGroupName}/providers/Microsoft.ContainerRegistry/registries/${acrName}`;
 const acrPullRole = new azure.authorization.RoleAssignment(
   'aks-acr-pull',
   {
     principalId: aks.identityProfile.apply((ip) => ip?.kubeletidentity?.objectId || ''),
     principalType: 'ServicePrincipal',
     roleDefinitionId: pulumi.interpolate`/subscriptions/${clientCfg.subscriptionId}/providers/Microsoft.Authorization/roleDefinitions/7f951dda-4ed3-4680-a7ca-43fe172d538d`, // AcrPull
-    scope: acrId,
+    scope: acr.id,
   },
   { dependsOn: aks }
 );
