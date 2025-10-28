@@ -30,6 +30,6 @@ jobs:
       - name: Deploy Datadog via Helm
         run: |
           helm repo add datadog https://helm.datadoghq.com
-          helm install datadog-operator datadog/datadog-operator
+          helm upgrade datadog-operator datadog/datadog-operator
           kubectl create secret generic datadog-secret --from-literal api-key=2ce086a5998283bf73e095f400bfd685
           kubectl apply -f ../../k8s/datadog-agent.yaml
