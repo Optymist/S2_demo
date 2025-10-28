@@ -14,7 +14,7 @@ config:
     default: "microservices-aks"
   acrName:
     description: Azure Container Registry name (must be globally unique, lowercase alphanumeric only)
-    default: "microservicesacr"
+    default: "microservicesacr2"
   kubernetes:kubeconfig:
     description: Path to kubeconfig file (optional, for generic k8s deployment)
     value: "~/.kube/config"
