@@ -62,9 +62,9 @@ jobs:
             echo "created=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Stack exists; skip provisioning
-        if: steps.stack.outputs.created == 'false'
-        run: echo "Pulumi stack '${{ env.PULUMI_STACK }}' already exists. Skipping infrastructure provisioning."
+      # - name: Stack exists; skip provisioning
+      #   if: steps.stack.outputs.created == 'false'
+      #   run: echo "Pulumi stack '${{ env.PULUMI_STACK }}' already exists. Skipping infrastructure provisioning."
 
       - name: Install Dependencies
         if: steps.stack.outputs.created == 'true'
