@@ -55,12 +55,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # if pulumi stack select "${PULUMI_STACK}" --non-interactive; then
-          #   echo "created=false" >> "$GITHUB_OUTPUT"
-          # else
-          pulumi stack init "${PULUMI_STACK}" --non-interactive
+          pulumi stack select "${PULUMI_STACK}" --non-interactive
           echo "created=true" >> "$GITHUB_OUTPUT"
-          # fi
 
       # - name: Stack exists; skip provisioning
       #   if: steps.stack.outputs.created == 'false'
