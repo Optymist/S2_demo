@@ -30,17 +30,6 @@ jobs:
       - name: Deploy Datadog via Helm
         run: |
           helm repo add datadog https://helm.datadoghq.com
-          helm repo update
-          kubectl create namespace microservices-demo --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create secret generic datadog-secret \
-            -n microservices-demo \
-            --from-literal=api-key=${{ secrets.DD_API_KEY }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-          helm upgrade --install datadog datadog/datadog \
-            -n microservices-demo \
-            --set datadog.apiKeyExistingSecret=datadog-secret \
-            --set datadog.site=us5.datadoghq.com \
-            --set clusterAgent.enabled=true \
-            --set logs.enabled=true \
-            --set kubeStateMetricsEnabled=true \
-            --set datadog.tags="{cluster:<AKS_NAME>}"
+          helm install datadog-operator datadog/datadog-operator
+          kubectl create secret generic datadog-secret --from-literal api-key=2ce086a5998283bf73e095f400bfd685
+          kubectl apply -f datadog-agent.yaml

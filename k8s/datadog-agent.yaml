@@ -1,84 +1,43 @@
----
-apiVersion: v1
-kind: Secret
+kind: "DatadogAgent"
+apiVersion: "datadoghq.com/v2alpha1"
 metadata:
-  name: datadog-secret
-  namespace: microservices-demo
-type: Opaque
-stringData:
-  api-key: "YOUR_DATADOG_API_KEY"  # Replace with your actual API key or use from environment
-  app-key: "YOUR_DATADOG_APP_KEY"  # Optional: Replace with your actual APP key
----
-apiVersion: datadoghq.com/v2alpha1
-kind: DatadogAgent
-metadata:
-  name: datadog
-  namespace: microservices-demo
+  name: "datadog"
 spec:
   global:
-    site: us5.datadoghq.com
+    site: "datadoghq.com"
     credentials:
       apiSecret:
-        secretName: datadog-secret
-        keyName: api-key
-    kubelet:
-      tlsVerify: false
+        secretName: "datadog-secret"
+        keyName: "api-key"
   features:
-    # Enable APM (Application Performance Monitoring) for traces
     apm:
-      enabled: true
-      hostPortConfig:
+      instrumentation:
         enabled: true
-        hostPort: 8126
-    
-    # Enable Log Collection
+        targets:
+          - name: "default-target"
+            ddTraceVersions:
+              java: "1"
+              python: "3"
+              js: "5"
+              php: "1"
+              dotnet: "3"
+              ruby: "2"
     logCollection:
       enabled: true
       containerCollectAll: true
-      containerCollectUsingFiles: true
-    
-    # Enable Live Container Monitoring
-    liveContainerCollection:
+    otelCollector:
       enabled: true
-    
-    # Enable Orchestrator Explorer
-    orchestratorExplorer:
-      enabled: true
-    
-    # Enable Kubernetes State Metrics
-    kubeStateMetricsCore:
-      enabled: true
-    
-    # Enable Process Collection
-    processDiscovery:
-      enabled: true
-  
+      ports:
+        - containerPort: 4317
+          hostPort: 4317
+          name: "otel-grpc"
+        - containerPort: 4318
+          hostPort: 4318
+          name: "otel-http"
   override:
     clusterAgent:
       containers:
         cluster-agent:
           env:
-            - name: DD_ADMISSION_CONTROLLER_ADD_AKS_SELECTORS
+            - name: "DD_ADMISSION_CONTROLLER_ADD_AKS_SELECTORS"
               value: "true"
-            - name: DD_CLUSTER_CHECKS_ENABLED
-              value: "true"
-            - name: DD_EXTRA_CONFIG_PROVIDERS
-              value: "kube_endpoints kube_services"
-    
-    nodeAgent:
-      containers:
-        agent:
-          env:
-            - name: DD_DOGSTATSD_NON_LOCAL_TRAFFIC
-              value: "true"
-            - name: DD_PROCESS_AGENT_ENABLED
-              value: "true"
-            - name: DD_SYSTEM_PROBE_ENABLED
-              value: "true"
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "200m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
